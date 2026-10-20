@@ -11,12 +11,16 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Cat Facts API, backed by a CSV file.
+ * Cat Facts API, backed by SQLite.
  *
  *   GET  /facts        every fact
  *   GET  /facts/{id}   one fact, or 404
@@ -50,21 +54,12 @@ public class App {
         }
     }
 
-    /** Appends one fact to the end of facts.csv as "id,fact". */
-    static void appendToCsv(CatFact fact) throws IOException {
-        Files.writeString(CSV_FILE, fact.id() + "," + fact.fact() + "\n",
-                StandardCharsets.UTF_8, StandardOpenOption.APPEND);
-    }
-
     static final Gson gson = new GsonBuilder()
             .setPrettyPrinting()
             .disableHtmlEscaping()   // keep ' and = readable instead of '
             .create();
 
     public static void main(String[] args) throws IOException {
-        loadFromCsv();
-        System.out.println("Loaded " + facts.size() + " facts from " + CSV_FILE);
-
         HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
         server.createContext("/facts", new FactsHandler());
         server.start();
@@ -85,7 +80,7 @@ public class App {
         }
 
         /** Decides which endpoint a request is for. */
-        void route(HttpExchange exchange) throws IOException {
+        void route(HttpExchange exchange) throws IOException, SQLException {
             String method = exchange.getRequestMethod();
             String path = exchange.getRequestURI().getPath();
 
@@ -122,23 +117,37 @@ public class App {
         }
 
         /** GET /facts */
-        void getAllFacts(HttpExchange exchange) throws IOException {
-            sendJson(exchange, 200, facts);
+        void getAllFacts(HttpExchange exchange) throws IOException, SQLException {
+            List<CatFact> results = new ArrayList<>();
+            String sql = "SELECT id, fact FROM facts ORDER BY id";
+            try (Connection conn = DriverManager.getConnection(DB_URL);
+                 PreparedStatement pstmt = conn.prepareStatement(sql);
+                 ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    results.add(new CatFact(rs.getInt("id"), rs.getString("fact")));
+                }
+            }
+            sendJson(exchange, 200, results);
         }
 
         /** GET /facts/{id} */
-        void getFactById(HttpExchange exchange, int id) throws IOException {
-            for (CatFact fact : facts) {
-                if (fact.id() == id) {
-                    sendJson(exchange, 200, fact);
-                    return;
+        void getFactById(HttpExchange exchange, int id) throws IOException, SQLException {
+            String sql = "SELECT id, fact FROM facts WHERE id = ?";
+            try (Connection conn = DriverManager.getConnection(DB_URL);
+                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setInt(1, id);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        sendJson(exchange, 200, new CatFact(rs.getInt("id"), rs.getString("fact")));
+                        return;
+                    }
                 }
             }
             sendJson(exchange, 404, new ErrorBody("no fact with id " + id));
         }
 
         /** POST /facts */
-        void createFact(HttpExchange exchange) throws IOException {
+        void createFact(HttpExchange exchange) throws IOException, SQLException {
             String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
 
             NewFact input;
@@ -153,16 +162,16 @@ public class App {
                 return;
             }
             String text = input.fact().trim();
-            if (text.contains("\n") || text.contains("\r")) {
-                // One fact per line is how facts.csv is laid out.
-                sendJson(exchange, 400, new ErrorBody("\"fact\" must be a single line"));
-                return;
+            CatFact created;
+            String sql = "INSERT INTO facts (fact) VALUES (?) RETURNING id";
+            try (Connection conn = DriverManager.getConnection(DB_URL);
+                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, text);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    rs.next();
+                    created = new CatFact(rs.getInt("id"), text);
+                }
             }
-
-            CatFact created = new CatFact(nextId, text);
-            appendToCsv(created);
-            facts.add(created);
-            nextId++;
 
             exchange.getResponseHeaders().set("Location", "/facts/" + created.id());
             sendJson(exchange, 201, created);

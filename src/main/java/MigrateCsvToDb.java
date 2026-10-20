@@ -24,8 +24,7 @@ public class MigrateCsvToDb {
         try (Connection conn = DriverManager.getConnection(DB_URL)) {
             createTable(conn);
             System.out.println("Table ready");
-
-            // TODO (Section 3): call copyFacts here.
+            copyFacts(conn);
         }
     }
 
@@ -41,23 +40,20 @@ public class MigrateCsvToDb {
         App.loadFromCsv();
         System.out.println("Read " + App.facts.size() + " facts from facts.csv");
 
-        // TODO: turn off auto-commit, so nothing is saved until you commit.
+        conn.setAutoCommit(false);
 
         String sql = "INSERT INTO facts (id, fact) VALUES (?, ?)";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             int inserted = 0;
             for (App.CatFact fact : App.facts) {
-                // TODO: fill the two ? placeholders with this fact's id and text.
-
-                // TODO: run the insert, and add the number of rows it changed to inserted.
-
+                pstmt.setInt(1, fact.id());
+                pstmt.setString(2, fact.fact());
+                inserted += pstmt.executeUpdate();
             }
-            // TODO: make every insert permanent, all at once.
-
+            conn.commit();
             System.out.println("Migrated " + inserted + " facts");
         } catch (SQLException e) {
-            // TODO: undo every insert made since auto-commit was turned off.
-
+            conn.rollback();
             System.out.println("Migration failed, rolled back. Nothing was saved.");
             throw e;
         }
