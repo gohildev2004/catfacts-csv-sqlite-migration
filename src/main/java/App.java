@@ -18,6 +18,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Cat Facts API, backed by SQLite.
@@ -110,7 +111,12 @@ public class App {
                 return;
             }
             if (method.equals("GET")) {
-                getFactById(exchange, id);
+                Optional<CatFact> found = findFactById(DB_URL, id);
+                if (found.isPresent()) {
+                    sendJson(exchange, 200, found.get());
+                } else {
+                    sendJson(exchange, 404, new ErrorBody("no fact with id " + id));
+                }
             } else {
                 sendJson(exchange, 405, new ErrorBody("method not allowed"));
             }
@@ -131,19 +137,18 @@ public class App {
         }
 
         /** GET /facts/{id} */
-        void getFactById(HttpExchange exchange, int id) throws IOException, SQLException {
+        Optional<CatFact> findFactById(String dbUrl, int id) throws SQLException {
             String sql = "SELECT id, fact FROM facts WHERE id = ?";
-            try (Connection conn = DriverManager.getConnection(DB_URL);
+            try (Connection conn = DriverManager.getConnection(dbUrl);
                  PreparedStatement pstmt = conn.prepareStatement(sql)) {
                 pstmt.setInt(1, id);
                 try (ResultSet rs = pstmt.executeQuery()) {
                     if (rs.next()) {
-                        sendJson(exchange, 200, new CatFact(rs.getInt("id"), rs.getString("fact")));
-                        return;
+                        return Optional.of(new CatFact(rs.getInt("id"), rs.getString("fact")));
                     }
                 }
             }
-            sendJson(exchange, 404, new ErrorBody("no fact with id " + id));
+            return Optional.empty();
         }
 
         /** POST /facts */
