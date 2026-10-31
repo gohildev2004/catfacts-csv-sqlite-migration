@@ -1,11 +1,25 @@
+/*
+ * Note: everything passes except loadFromCsvTwiceDoesNotDoubleFacts (question 17).
+ * loadFromCsv never clears App.facts before reading, so calling it twice gives 20 facts instead of 10.
+ * Since facts is static it also carries over between tests, so I reset it in @BeforeEach
+ * to keep the other loadFromCsv tests from depending on which order they run in.
+ */
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class AppTest {
+
+    @BeforeEach
+    void resetFacts() {
+        App.facts.clear();
+        App.nextId = 1;
+    }
 
     @Test
     void catFactKeepsIdAndFactPassedIn() {
@@ -101,5 +115,50 @@ class AppTest {
         App.CatFact result = App.gson.fromJson(json, App.CatFact.class);
 
         assertEquals(original, result);
+    }
+
+    @Test
+    void loadFromCsvReadsEveryRow() throws IOException {
+        App.loadFromCsv();
+
+        assertEquals(10, App.facts.size());
+    }
+
+    @Test
+    void factWithCommasIsStoredWhole() throws IOException {
+        App.loadFromCsv();
+
+        App.CatFact fact9 = null;
+        for (App.CatFact f : App.facts) {
+            if (f.id() == 9) {
+                fact9 = f;
+            }
+        }
+
+        assertEquals("Cats, like people, tend to favor one paw over the other", fact9.fact());
+    }
+
+    @Test
+    void idsComeFromTheFile() throws IOException {
+        App.loadFromCsv();
+
+        assertEquals(1, App.facts.get(0).id());
+    }
+
+    @Test
+    void nextIdIsOnePastHighestId() throws IOException {
+        App.loadFromCsv();
+
+        assertEquals(11, App.nextId);
+    }
+
+    // This fails: loadFromCsv just adds to the list without clearing it, so the second call gives 20 facts.
+    // I would fix it by calling facts.clear() at the start of loadFromCsv.
+    @Test
+    void loadFromCsvTwiceDoesNotDoubleFacts() throws IOException {
+        App.loadFromCsv();
+        App.loadFromCsv();
+
+        assertEquals(10, App.facts.size());
     }
 }
