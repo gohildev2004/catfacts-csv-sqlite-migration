@@ -5,10 +5,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
-/**
- * Reads the request off the HttpExchange, asks the router what to do, and writes its Response back.
- * This is the only class that touches HttpExchange.
- */
 class FactsHandler implements HttpHandler {
 
     private final FactsRouter router;

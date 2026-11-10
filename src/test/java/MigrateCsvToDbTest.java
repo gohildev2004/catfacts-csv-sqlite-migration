@@ -1,9 +1,3 @@
-/*
- * Note: everything passes except loadFromCsvTwiceDoesNotDoubleFacts (question 17).
- * loadFromCsv never clears MigrateCsvToDb.facts before reading, so calling it twice gives 20 facts instead of 10.
- * Since facts is static it also carries over between tests, so I reset it in @BeforeEach
- * to keep the other loadFromCsv tests from depending on which order they run in.
- */
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -54,8 +48,7 @@ class MigrateCsvToDbTest {
         assertEquals(11, MigrateCsvToDb.nextId);
     }
 
-    // This fails: loadFromCsv just adds to the list without clearing it, so the second call gives 20 facts.
-    // I would fix it by calling facts.clear() at the start of loadFromCsv.
+    // fails: loadFromCsv doesn't clear facts first, so calling it twice gives 20
     @Test
     void loadFromCsvTwiceDoesNotDoubleFacts() throws IOException {
         MigrateCsvToDb.loadFromCsv();

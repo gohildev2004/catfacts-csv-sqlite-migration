@@ -3,10 +3,6 @@ import com.google.gson.JsonParseException;
 import java.sql.SQLException;
 import java.util.Optional;
 
-/**
- * Makes every status-code and validation decision for /facts.
- * It never touches HttpExchange and never runs SQL; it asks FactDatabase instead.
- */
 class FactsRouter {
 
     private final FactDatabase database;
@@ -15,7 +11,7 @@ class FactsRouter {
         this.database = database;
     }
 
-    /** Decides which endpoint a request is for and what to send back. */
+    /** Decides which endpoint a request is for. */
     Response route(String method, String path, String body) throws SQLException {
         // "/facts" or "/facts/"  ->  returns the whole collection
         if (path.equals("/facts") || path.equals("/facts/")) {

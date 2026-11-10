@@ -9,8 +9,6 @@ import java.net.InetSocketAddress;
  *   GET  /facts        every fact
  *   GET  /facts/{id}   one fact, or 404
  *   POST /facts        add a fact; body is {"fact": "..."}
- *
- * App only wires the parts together and starts the server.
  */
 public class App {
 

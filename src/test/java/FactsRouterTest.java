@@ -13,9 +13,6 @@ class FactsRouterTest {
     @TempDir
     Path tempDir;
 
-    // Before the split this was impossible: createFact needed a real HttpExchange to read the body
-    // and set the Location header, and it always wrote to catfacts.db. Now the router takes plain
-    // strings, returns a Response, and gets a test database through FactDatabase's constructor.
     @Test
     void postingAFactReturns201WithLocationOfTheNewFact() throws Exception {
         String url = "jdbc:sqlite:" + tempDir.resolve("test.db");

@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-/** Runs all of the API's SQL against the database it was given. */
 class FactDatabase {
 
     private final String dbUrl;
@@ -45,7 +44,7 @@ class FactDatabase {
         return Optional.empty();
     }
 
-    /** POST /facts: saves the text and returns it with the id the database gave it. */
+    /** POST /facts */
     CatFact insertFact(String text) throws SQLException {
         String sql = "INSERT INTO facts (fact) VALUES (?) RETURNING id";
         try (Connection conn = DriverManager.getConnection(dbUrl);
