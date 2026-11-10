@@ -10,7 +10,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class AppTest {
+class FactDatabaseTest {
 
     @TempDir
     Path tempDir;
@@ -26,7 +26,7 @@ class AppTest {
             s.executeUpdate("INSERT INTO facts (id, fact) VALUES (2, 'Cats, oddly, cannot taste sweetness')");
         }
 
-        List<CatFact> facts = new App.FactsHandler().getAllFacts(url);
+        List<CatFact> facts = new FactDatabase(url).getAllFacts();
 
         assertEquals(2, facts.size());
         assertEquals(1, facts.get(0).id());
@@ -44,7 +44,7 @@ class AppTest {
             s.executeUpdate("INSERT INTO facts (id, fact) VALUES (2, 'Cats, oddly, cannot taste sweetness')");
         }
 
-        Optional<CatFact> found = new App.FactsHandler().findFactById(url, 2);
+        Optional<CatFact> found = new FactDatabase(url).findFactById(2);
 
         assertTrue(found.isPresent());
         assertEquals(new CatFact(2, "Cats, oddly, cannot taste sweetness"), found.get());
@@ -61,7 +61,7 @@ class AppTest {
             s.executeUpdate("INSERT INTO facts (id, fact) VALUES (2, 'Cats, oddly, cannot taste sweetness')");
         }
 
-        Optional<CatFact> found = new App.FactsHandler().findFactById(url, 99);
+        Optional<CatFact> found = new FactDatabase(url).findFactById(99);
 
         assertFalse(found.isPresent());
     }
