@@ -1,9 +1,14 @@
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * One-shot program: creates the facts table and copies every fact from
@@ -12,6 +17,7 @@ import java.sql.Statement;
 public class MigrateCsvToDb {
 
     static final String DB_URL = "jdbc:sqlite:catfacts.db";
+    static final Path CSV_FILE = Path.of("facts.csv");
 
     static final String CREATE_TABLE = """
         CREATE TABLE IF NOT EXISTS facts (
@@ -20,11 +26,29 @@ public class MigrateCsvToDb {
         )
         """;
 
+    static final List<CatFact> facts = new ArrayList<>();
+    static int nextId = 1;
+
     public static void main(String[] args) throws IOException, SQLException {
         try (Connection conn = DriverManager.getConnection(DB_URL)) {
             createTable(conn);
             System.out.println("Table ready");
             copyFacts(conn);
+        }
+    }
+
+    /** Reads every line of facts.csv into the in-memory list. */
+    static void loadFromCsv() throws IOException {
+        for (String line : Files.readAllLines(CSV_FILE, StandardCharsets.UTF_8)) {
+            if (line.isBlank()) {
+                continue;
+            }
+            // Limit of 2: split at the FIRST comma only, so commas in the fact survive.
+            String[] parts = line.split(",", 2);
+            int id = Integer.parseInt(parts[0].trim());
+            String fact = parts[1].trim();
+            facts.add(new CatFact(id, fact));
+            nextId = Math.max(nextId, id + 1);
         }
     }
 
@@ -37,15 +61,15 @@ public class MigrateCsvToDb {
 
     /** Section 3: copies every fact from facts.csv into the facts table, as one transaction. */
     static void copyFacts(Connection conn) throws IOException, SQLException {
-        App.loadFromCsv();
-        System.out.println("Read " + App.facts.size() + " facts from facts.csv");
+        loadFromCsv();
+        System.out.println("Read " + facts.size() + " facts from facts.csv");
 
         conn.setAutoCommit(false);
 
         String sql = "INSERT INTO facts (id, fact) VALUES (?, ?)";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             int inserted = 0;
-            for (CatFact fact : App.facts) {
+            for (CatFact fact : facts) {
                 pstmt.setInt(1, fact.id());
                 pstmt.setString(2, fact.fact());
                 inserted += pstmt.executeUpdate();

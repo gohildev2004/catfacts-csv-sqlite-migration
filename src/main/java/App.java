@@ -7,8 +7,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -28,26 +26,7 @@ import java.util.Optional;
 public class App {
 
     static final int PORT = 8080;
-    static final Path CSV_FILE = Path.of("facts.csv");
     static final String DB_URL = "jdbc:sqlite:catfacts.db";
-
-    static final List<CatFact> facts = new ArrayList<>();
-    static int nextId = 1;
-
-    /** Reads every line of facts.csv into the in-memory list. */
-    static void loadFromCsv() throws IOException {
-        for (String line : Files.readAllLines(CSV_FILE, StandardCharsets.UTF_8)) {
-            if (line.isBlank()) {
-                continue;
-            }
-            // Limit of 2: split at the FIRST comma only, so commas in the fact survive.
-            String[] parts = line.split(",", 2);
-            int id = Integer.parseInt(parts[0].trim());
-            String fact = parts[1].trim();
-            facts.add(new CatFact(id, fact));
-            nextId = Math.max(nextId, id + 1);
-        }
-    }
 
     public static void main(String[] args) throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
