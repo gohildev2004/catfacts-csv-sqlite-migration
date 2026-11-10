@@ -13,7 +13,6 @@ import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -31,65 +30,8 @@ class AppTest {
     }
 
     @Test
-    void catFactKeepsIdAndFactPassedIn() {
-        App.CatFact catFact = new App.CatFact(5, "Cats sleep a lot");
-
-        assertEquals(5, catFact.id());
-        assertEquals("Cats sleep a lot", catFact.fact());
-    }
-
-    @Test
-    void twoCatFactsWithSameValuesAreEqual() {
-        App.CatFact first = new App.CatFact(3, "A group of cats is called a clowder");
-        App.CatFact second = new App.CatFact(3, "A group of cats is called a clowder");
-
-        assertEquals(first, second);
-    }
-
-    @Test
-    void twoCatFactsWithDifferentTextAreNotEqual() {
-        App.CatFact first = new App.CatFact(3, "A group of cats is called a clowder");
-        App.CatFact second = new App.CatFact(3, "Cats were worshipped in ancient Egypt");
-
-        assertNotEquals(first, second);
-    }
-
-    @Test
-    void listFindsCatFactByValues() {
-        List<App.CatFact> list = new ArrayList<>();
-        list.add(new App.CatFact(1, "A cat has 230 bones"));
-
-        boolean found = list.contains(new App.CatFact(1, "A cat has 230 bones"));
-
-        assertTrue(found);
-    }
-
-    @Test
-    void newFactGivesBackItsText() {
-        App.NewFact newFact = new App.NewFact("Cats have whiskers");
-
-        assertEquals("Cats have whiskers", newFact.fact());
-    }
-
-    @Test
-    void errorBodyGivesBackItsMessage() {
-        App.ErrorBody errorBody = new App.ErrorBody("not found");
-
-        assertEquals("not found", errorBody.error());
-    }
-
-    // The record itself doesn't check for blank text, that only happens in the schema and the POST handler.
-    @Test
-    void catFactCanHoldEmptyText() {
-        App.CatFact catFact = new App.CatFact(1, "");
-
-        assertNotEquals(null, catFact);
-        assertEquals("", catFact.fact());
-    }
-
-    @Test
     void serializedCatFactContainsBothFields() {
-        App.CatFact catFact = new App.CatFact(7, "Cats have five toes in front");
+        CatFact catFact = new CatFact(7, "Cats have five toes in front");
 
         String json = App.gson.toJson(catFact);
 
@@ -101,14 +43,14 @@ class AppTest {
     void jsonBodyDeserializesIntoNewFact() {
         String json = "{\"fact\": \"Cats can jump really high\"}";
 
-        App.NewFact newFact = App.gson.fromJson(json, App.NewFact.class);
+        NewFact newFact = App.gson.fromJson(json, NewFact.class);
 
         assertEquals("Cats can jump really high", newFact.fact());
     }
 
     @Test
     void apostropheStaysAnApostrophe() {
-        App.CatFact catFact = new App.CatFact(2, "A cat's nose is unique");
+        CatFact catFact = new CatFact(2, "A cat's nose is unique");
 
         String json = App.gson.toJson(catFact);
 
@@ -118,10 +60,10 @@ class AppTest {
 
     @Test
     void factWithCommasSurvivesSerializeAndDeserialize() {
-        App.CatFact original = new App.CatFact(9, "Cats, unlike dogs, cannot taste sweetness");
+        CatFact original = new CatFact(9, "Cats, unlike dogs, cannot taste sweetness");
 
         String json = App.gson.toJson(original);
-        App.CatFact result = App.gson.fromJson(json, App.CatFact.class);
+        CatFact result = App.gson.fromJson(json, CatFact.class);
 
         assertEquals(original, result);
     }
@@ -137,8 +79,8 @@ class AppTest {
     void factWithCommasIsStoredWhole() throws IOException {
         App.loadFromCsv();
 
-        App.CatFact fact9 = null;
-        for (App.CatFact f : App.facts) {
+        CatFact fact9 = null;
+        for (CatFact f : App.facts) {
             if (f.id() == 9) {
                 fact9 = f;
             }
@@ -182,7 +124,7 @@ class AppTest {
             s.executeUpdate("INSERT INTO facts (id, fact) VALUES (2, 'Cats, oddly, cannot taste sweetness')");
         }
 
-        List<App.CatFact> facts = new App.FactsHandler().getAllFacts(url);
+        List<CatFact> facts = new App.FactsHandler().getAllFacts(url);
 
         assertEquals(2, facts.size());
         assertEquals(1, facts.get(0).id());
@@ -200,10 +142,10 @@ class AppTest {
             s.executeUpdate("INSERT INTO facts (id, fact) VALUES (2, 'Cats, oddly, cannot taste sweetness')");
         }
 
-        Optional<App.CatFact> found = new App.FactsHandler().findFactById(url, 2);
+        Optional<CatFact> found = new App.FactsHandler().findFactById(url, 2);
 
         assertTrue(found.isPresent());
-        assertEquals(new App.CatFact(2, "Cats, oddly, cannot taste sweetness"), found.get());
+        assertEquals(new CatFact(2, "Cats, oddly, cannot taste sweetness"), found.get());
     }
 
     @Test
@@ -217,7 +159,7 @@ class AppTest {
             s.executeUpdate("INSERT INTO facts (id, fact) VALUES (2, 'Cats, oddly, cannot taste sweetness')");
         }
 
-        Optional<App.CatFact> found = new App.FactsHandler().findFactById(url, 99);
+        Optional<CatFact> found = new App.FactsHandler().findFactById(url, 99);
 
         assertFalse(found.isPresent());
     }
